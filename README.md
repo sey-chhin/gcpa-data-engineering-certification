@@ -1,2 +1,3 @@
 # gcpa-data-engineering-certification
-Welcome to my GCPA Data Engineering 
+This GCPA Data Engineering Repo is meant to be used for everything related to my GCPA Certification journey
+
