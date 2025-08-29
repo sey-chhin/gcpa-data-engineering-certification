@@ -1,5 +1,11 @@
-# What this sets up
+# Purpose
+The purpose of this this terraform play to automate the creatation and deletion of googe gloud to reduce the cost of ownership during the learning stages.
 
+## requirements
+- env setup
+- gcloud sdk
+
+### Terraform
 •  Project & billing — Creates a new project bound to your billing account; optional folder placement; labels for governance.
 
 •  APIs — Enables essential services (Compute, IAM, Networking, KMS, Secret Manager, Cloud Logging/Monitoring, etc.).
