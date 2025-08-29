@@ -79,3 +79,10 @@ terraform/
 ├── README.md
 └── .gitignore
 ```
+terraform init
+terraform apply \
+  -var="project_name=${PROJECT_NAME}" \
+  -var="project_id=${PROJECT_ID}" \
+  -var="billing_account=${BILLING_ACCOUNT}" \
+  -var="org_id=${ORG_ID}"
+
