@@ -38,17 +38,11 @@ output "storage_bucket_names" {
 ########################################
 # Compute outputs
 ########################################
+
 output "instance_name" {
-  value       = google_compute_instance.e2_vm.name
-  description = "Name of the created VM instance"
+  value = module.compute.instance_name
 }
 
-output "instance_self_link" {
-  value       = google_compute_instance.e2_vm.self_link
-  description = "Self-link of the VM instance"
-}
-
-output "instance_external_ip" {
-  value       = google_compute_instance.e2_vm.network_interface[0].access_config[0].nat_ip
-  description = "External IP address"
+output "external_ip" {
+  value = module.compute.external_ip
 }

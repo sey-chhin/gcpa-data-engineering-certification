@@ -38,9 +38,9 @@ region = "us-east4"
 # e2 machines
 
 e2_name = "e2-sandbox"
-boot_image = "debian-cloud/debian-11"
-disk_size_gb = 20
-disk_type = "pd-standard"
+boot_image = "debian-12-bookworm-v20250812"
+disk_size_gb = "10"
+disk_type = "Balanced persistent disk"
 tags = ["http-server", "https-server"]
 subnetwork = "default"
 workload_sa_email = ""

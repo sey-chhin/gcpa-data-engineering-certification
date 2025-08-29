@@ -1,5 +1,6 @@
 provider "google" {
   region  = var.default_region
+  
 }
 
 variable "default_region" {

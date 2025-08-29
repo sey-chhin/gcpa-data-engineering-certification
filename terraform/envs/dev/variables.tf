@@ -39,11 +39,11 @@ variable "region" {}
 
 # variable "project_id" { type = map(string) }
 
-variable "boot_image" { type = map(string) }
+variable "boot_image" { type = string }
 
-variable "disk_size_gb" { type = map(number) }
+variable "disk_size_gb" { type = number }
 
-variable "disk_type" { type = map(string) }
+variable "disk_type" { type = string }
 
 
 variable "tags" {
