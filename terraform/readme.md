@@ -79,6 +79,10 @@ terraform/
 ├── README.md
 └── .gitignore
 ```
+to execute: 
+1. bash gcpa_var_setup
+
+2.
 terraform init
 terraform apply \
   -var="project_name=${PROJECT_NAME}" \
