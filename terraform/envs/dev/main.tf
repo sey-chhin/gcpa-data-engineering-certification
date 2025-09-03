@@ -1,8 +1,5 @@
 terraform {
-  backend "gcs" {
-    bucket  = var.storage_buckets
-    prefix = "terraform/state/dev"
-  }
+  backend "gcs" {}
 }
 
 provider "google" {
