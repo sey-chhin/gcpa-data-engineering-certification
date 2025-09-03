@@ -2,7 +2,7 @@ name: Terraform CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev3 ]
   workflow_dispatch:
 
 permissions:
