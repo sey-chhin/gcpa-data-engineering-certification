@@ -1,5 +1,7 @@
 terraform {
-  backend "gcs" {}
+  backend "gcs" {
+    bucket  = var.storage_buckets[0].name
+  }
 }
 
 provider "google" {
