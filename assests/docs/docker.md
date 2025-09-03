@@ -167,3 +167,27 @@ jobs:
 ```
 
 If you literally wanted github.io: GitHub Pages hosts static files only. You’d build your site (optionally with Docker), then publish the static output to Pages—not the container image.
+
+
+
+
+# known issues
+1. Arch from Mac builds are different from default Arch supplied by aws `ubuntu-latest`.
+the workaround is to create a new image for amd64 vs (arm64-mac standard)  
+![terraform issue1](image-1.png)
+
+
+```
+# login first
+printf %s "$CR_PAT" | docker login ghcr.io -u <owner> --password-stdin
+
+# enable buildx (one-time)
+docker buildx create --use
+
+# build & push for both amd64 and arm64
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/<owner>/terraform-env:1.0.0 \
+  -t ghcr.io/<owner>/terraform-env:latest \
+  --push .
+  ```
