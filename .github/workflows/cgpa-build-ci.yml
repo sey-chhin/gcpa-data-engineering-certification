@@ -32,7 +32,8 @@ jobs:
     #   run: terraform --version
 
     - name: Initialize Terraform
-      run: terraform init -backend-config="../../global/backend.tf"
+      run: terraform init
+      # run: terraform init -backend-config="../../global/backend.tf"
       working-directory: ./terraform/envs/dev
 
       # terraform plan with output to a file for later use DEV only
