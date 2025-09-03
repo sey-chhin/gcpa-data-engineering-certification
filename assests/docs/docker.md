@@ -22,8 +22,9 @@ docker run -it --rm terraform-env:dev bash
 This opens a shell inside the container so you can verify Terraform is installed, check environment setup, etc.
 
 
-'''
+```
 docker run -it --rm terraform-env:dev bash
+
 
 Hooray! Oh My Zsh has been updated!
 
@@ -42,35 +43,49 @@ root@121b4866df6e:/workspace#
 If you just want to validate the install:
 
 bash
+```
 docker run --rm terraform-env:dev terraform version
+```
+
 4. Mount your local Terraform config (optional)
 To test with real .tf files:
 
 bash
+```
 docker run -it --rm \
   -v "$(pwd)/your-terraform-dir":/workspace \
   -w /workspace \
   terraform-env:dev bash
+```
 This mounts your local directory into the container and sets it as the working directory.
 
 
-# Push your image to GHCR
-# 1) Login (create a PAT with "write:packages"; SSO-enable it if your org requires)
+### Push your image to GHCR
+1) Login (create a PAT with "write:packages"; SSO-enable it if your org requires)
+
+```
 echo $GH_PAT | docker login ghcr.io -u <GITHUB_USERNAME> --password-stdin
+```
 
 ```
 ➜  terraform-env git:(dev3) ✗ echo $GHCR_PAT | docker login ghcr.io --username hooubis --password-stdin
 Login Succeeded
 ```
 
-# 2) Build the image from your Dockerfile
+2) Build the image from your Dockerfile
 docker build -t ghcr.io/<OWNER>/<IMAGE_NAME>:<TAG> .
 
-# 3) Push it
+3) Push it
+```
 docker push ghcr.io/<OWNER>/<IMAGE_NAME>:<TAG>
+```
+terraform-env git:(dev3) ✗ docker buildx build --platform linux/amd64 -t ghcr.io/hooubis/terraform-env:1.1.0 --push .
+## builds on amd64 arch
+
 
 ```
 Login Succeeded
+
 ➜  terraform-env git:(dev3) ✗ docker logout ghcr.io 2>/dev/null || true                              
 Removing login credentials for ghcr.io
 ➜  terraform-env git:(dev3) ✗ printf %s "$GHCR_PAT" | docker login ghcr.io -u hooubis --password-stdin
@@ -141,7 +156,7 @@ db895700c986: Pushed
 # github settings
 ![alt text](image.png)
 
->[!NOTE]
+> [!NOTE] 
 > user must have PAT setup in order to run docker push 
 
 ```
@@ -197,3 +212,5 @@ docker buildx build \
   -t ghcr.io/<owner>/terraform-env:latest \
   --push .
   ```
+
+  

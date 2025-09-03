@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # use custome docker image created for terraform with gcloud sdk installed
-      image: ghcr.io/hooubis/terraform-env:1.0.0   # Use your custom Docker image
+      image: ghcr.io/hooubis/terraform-env:1.1.0   # Use your custom Docker image
       credentials:
         username: hooubis
         password: ${{ secrets.GHCR_IO_SCHHIN }}
