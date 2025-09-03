@@ -5,16 +5,18 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/hooubis/terraform-env:1.0.0   # Use your custom Docker image
-      options: --user ${{ github.ACTOR }}  # Run as non-root user for improved security and to follow best practices, preventing permission issues inside the container
-    env:
-      # TERRAFORM_IMAGE: ghcr.io/hooubis/terraform-env:1.0.0
-      ACTOR: ${{ github.ACTOR }}
-    # steps:
+      credentials:
+        username: ${{ github.ACTOR }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     #   - uses: actions/checkout@v4
     #   - uses: docker/login-action@v3
     #     with:
