@@ -1,0 +1,4 @@
+terraform/.terraform/*
+*.terra
+.DS_Store
+terraform/terraform-provider-google*
