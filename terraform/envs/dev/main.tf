@@ -1,5 +1,8 @@
 terraform {
-  backend "gcs" {}
+  backend "gcs" {
+    bucket = "pde-exam-bucket-1"
+    prefix = "terraform/envs/dev"
+  }
 }
 
 provider "google" {
