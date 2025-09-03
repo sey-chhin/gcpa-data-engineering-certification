@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket  = var.storage_buckets[0].name
+    bucket  = var.storage_buckets
     prefix = "terraform/state/dev"
   }
 }
