@@ -16,7 +16,7 @@ jobs:
       image: ghcr.io/hooubis/terraform-env:1.0.0   # Use your custom Docker image
       credentials:
         username: hooubis
-        password: ${{ secrets.ghcr-io-schhin }}
+        password: ${{ secrets.GHCR-IO-SCHHIN }}
 
     #   - uses: actions/checkout@v4
     #   - uses: docker/login-action@v3
