@@ -10,7 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/schhin/terraform-env:latest # Use your custom Docker image
-      options: --user root
+      options: --user schhin  # Run as non-root user
+    # steps:
+    #   - uses: actions/checkout@v4
+    #   - uses: docker/login-action@v3
+    #     with:
+    #       registry: ghcr.io
+    #       username: ${{ github.actor }}
+    #       password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
     - name: Checkout code
