@@ -9,7 +9,7 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/YOUR_USERNAME/YOUR_IMAGE_NAME:latest
+      image: ghcr.io/schhin/terraform-env:latest # Use your custom Docker image
       options: --user root
 
     steps:
@@ -19,4 +19,11 @@ jobs:
     - name: Verify Terraform version
       run: terraform --version
 
-    # Add your Terraform init/plan/apply steps here
+    # - name: Initialize Terraform
+    #   run: terraform init 
+    #   working-directory: ./terraform/envs/dev
+
+    # - name: Validate Terraform configuration
+    #   run: terraform validate
+    #   working-directory: ./terraform/envs/dev   
+

@@ -31,3 +31,6 @@ WORKDIR /workspace
 
 # Default shell
 CMD [ "bash" ]
+
+# Display success message
+RUN echo "SUCCESS!"
