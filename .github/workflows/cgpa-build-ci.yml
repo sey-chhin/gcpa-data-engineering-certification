@@ -28,14 +28,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Verify Terraform version
-      run: terraform --version
+    # - name: Verify Terraform version
+    #   run: terraform --version
 
-    # - name: Initialize Terraform
-    #   run: terraform init 
-    #   working-directory: ./terraform/envs/dev
+    - name: Initialize Terraform
+      run: terraform init 
+      working-directory: ./terraform/envs/dev
 
-    # - name: Validate Terraform configuration
-    #   run: terraform validate
-    #   working-directory: ./terraform/envs/dev   
+      # terraform plan with output to a file for later use DEV only
+    - name: Validate Terraform configuration
+      run: terraform plan -out=tfplan
+      working-directory: ./terraform/envs/dev 
+      env:
+        PROJECT_NAME: ${{ env.GCP_SCHHIN_CREDENTIALS }}
+        PROJECT_ID: ${{ env.GCP_SCHHIN_PROJECT_ID }}
+        BILLING_ACCOUNT: ${{ env.GCP_SCHHIN_BILLING_ACCOUNT }}
+        ORG_ID: ${{ env.GCP_SCHHIN_ORG_ID }}
+
+    
+    outputs:
+      tfplan: ${{ steps.validate.outputs.tfplan }}
 
