@@ -12,7 +12,7 @@ jobs:
       image: ghcr.io/hooubis/terraform-env:latest   # Use your custom Docker image
       options: --user ${{ github.ACTOR }}  # Run as non-root user for improved security and to follow best practices, preventing permission issues inside the container
     env:
-      TERRAFORM_IMAGE: ghcr.io/schhin/terraform-env:latest
+      TERRAFORM_IMAGE: ghcr.io/hooubis/terraform-env:latest
       ACTOR: ${{ github.ACTOR }}
     # steps:
     #   - uses: actions/checkout@v4

@@ -52,6 +52,11 @@ This mounts your local directory into the container and sets it as the working d
 # 1) Login (create a PAT with "write:packages"; SSO-enable it if your org requires)
 echo $GH_PAT | docker login ghcr.io -u <GITHUB_USERNAME> --password-stdin
 
+```
+➜  terraform-env git:(dev3) ✗ echo $GHCR_PAT | docker login ghcr.io --username hooubis --password-stdin
+Login Succeeded
+```
+
 # 2) Build the image from your Dockerfile
 docker build -t ghcr.io/<OWNER>/<IMAGE_NAME>:<TAG> .
 
@@ -59,12 +64,19 @@ docker build -t ghcr.io/<OWNER>/<IMAGE_NAME>:<TAG> .
 docker push ghcr.io/<OWNER>/<IMAGE_NAME>:<TAG>
 
 ```
-➜  terraform-env git:(dev3) ✗ docker build -t ghcr.io/schhin/terraform-env:latest .
-[+] Building 4.2s (11/11) FINISHED                                                                                                                    docker:desktop-linux
+Login Succeeded
+➜  terraform-env git:(dev3) ✗ docker logout ghcr.io 2>/dev/null || true                              
+Removing login credentials for ghcr.io
+➜  terraform-env git:(dev3) ✗ printf %s "$GHCR_PAT" | docker login ghcr.io -u hooubis --password-stdin
+Login Succeeded
+➜  terraform-env git:(dev3) ✗ IMG=ghcr.io/hooubis/terraform-env:1.0.0                                  
+docker build . \
+  -t "$IMG" \
+  --label org.opencontainers.image.source="https://github.com/hooubis/terraform-env"
+[+] Building 0.6s (10/10) FINISHED                                                                                                                    docker:desktop-linux
  => [internal] load build definition from Dockerfile                                                                                                                  0.0s
  => => transferring dockerfile: 817B                                                                                                                                  0.0s
- => [internal] load metadata for docker.io/library/ubuntu:22.04                                                                                                       3.9s
- => [auth] library/ubuntu:pull token for registry-1.docker.io                                                                                                         0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                                                                       0.5s
  => [internal] load .dockerignore                                                                                                                                     0.0s
  => => transferring context: 2B                                                                                                                                       0.0s
  => [1/6] FROM docker.io/library/ubuntu:22.04@sha256:4e0171b9275e12d375863f2b3ae9ce00a4c53ddda176bd55868df97ac6f21a6e                                                 0.0s
@@ -73,15 +85,51 @@ docker push ghcr.io/<OWNER>/<IMAGE_NAME>:<TAG>
  => CACHED [3/6] RUN curl -fsSL https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_amd64.zip     -o terraform.zip &&     unzip terraform.zip &&     0.0s
  => CACHED [4/6] RUN terraform --version                                                                                                                              0.0s
  => CACHED [5/6] WORKDIR /workspace                                                                                                                                   0.0s
- => [6/6] RUN echo "SUCCESS!"                                                                                                                                         0.1s
- => exporting to image                                                                                                                                                0.1s
+ => CACHED [6/6] RUN echo "SUCCESS!"                                                                                                                                  0.0s
+ => exporting to image                                                                                                                                                0.0s
  => => exporting layers                                                                                                                                               0.0s
- => => exporting manifest sha256:53d1322702f9cd37aad127c64a0112a04554ba13640b320f846f14714635c8cf                                                                     0.0s
- => => exporting config sha256:64fdcd209d1c8add3f3c1dff263d85ed06f40d3c7b8cae8db28771a97976ef1b                                                                       0.0s
- => => exporting attestation manifest sha256:66c2beed62e8dc7b581161f8e699de69c4e5fc944bc3edbaef4d896ab2b2ebce                                                         0.0s
- => => exporting manifest list sha256:7ff73e25c3cfd44ddb14c69bf4f2d955ca645aa96f2996a0b5a575875a0dd46b                                                                0.0s
- => => naming to ghcr.io/schhin/terraform-env:latest                                                                                                                  0.0s
- => => unpacking to ghcr.io/schhin/terraform-env:latest   
+ => => exporting manifest sha256:384d7f48ecddb7fe92936151fac02550ac6ba71b774be4414e2f811d9d9cd03c                                                                     0.0s
+ => => exporting config sha256:86b24beb5e3604826d7bfa323b14b1db058477396a20b2ccb327b4714d142660                                                                       0.0s
+ => => exporting attestation manifest sha256:2aa12343cac5a2bd4707a86c19d73edf97afc7b06044c68d5ea50cd2f5ea6d65                                                         0.0s
+ => => exporting manifest list sha256:0242436eeac855e18337fd68b819fefadac40c050ec7a2e3c16c0c84be46ecec                                                                0.0s
+ => => naming to ghcr.io/hooubis/terraform-env:1.0.0                                                                                                                   0.0s
+ => => unpacking to ghcr.io/hooubis/terraform-env:1.0.0                                                                                                                0.0s
+➜  terraform-env git:(dev3) ✗ IMG=ghcr.io/hooubis/terraform-env:1.0.0
+docker build . \
+  -t "$IMG" \
+  --label org.opencontainers.image.source="https://github.com/hooubis/terraform-env"
+[+] Building 0.4s (10/10) FINISHED                                                                                                                    docker:desktop-linux
+ => [internal] load build definition from Dockerfile                                                                                                                  0.0s
+ => => transferring dockerfile: 817B                                                                                                                                  0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                                                                       0.3s
+ => [internal] load .dockerignore                                                                                                                                     0.0s
+ => => transferring context: 2B                                                                                                                                       0.0s
+ => [1/6] FROM docker.io/library/ubuntu:22.04@sha256:4e0171b9275e12d375863f2b3ae9ce00a4c53ddda176bd55868df97ac6f21a6e                                                 0.0s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:4e0171b9275e12d375863f2b3ae9ce00a4c53ddda176bd55868df97ac6f21a6e                                                 0.0s
+ => CACHED [2/6] RUN apt-get update && apt-get install -y     gnupg     software-properties-common     curl     unzip     ca-certificates     lsb-release             0.0s
+ => CACHED [3/6] RUN curl -fsSL https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_amd64.zip     -o terraform.zip &&     unzip terraform.zip &&     0.0s
+ => CACHED [4/6] RUN terraform --version                                                                                                                              0.0s
+ => CACHED [5/6] WORKDIR /workspace                                                                                                                                   0.0s
+ => CACHED [6/6] RUN echo "SUCCESS!"                                                                                                                                  0.0s
+ => exporting to image                                                                                                                                                0.0s
+ => => exporting layers                                                                                                                                               0.0s
+ => => exporting manifest sha256:c2c2e65dfe92ac1892da8e36821da2da63f195b05875f6d36afec2a2db5ce8b8                                                                     0.0s
+ => => exporting config sha256:a59d4df1fd215fbadc599db24879e5bb5060d5df7fd503bdfde620ca6e05b1b9                                                                       0.0s
+ => => exporting attestation manifest sha256:ac43abb6e49b228087ca4854e25e4c4e08f8b560f094747fe8f571b190ed9ab2                                                         0.0s
+ => => exporting manifest list sha256:afcc8a43ed116fd9b5b42dbf2d65404acc5e4f503a5d3b5b0ebba78a3b08e9a7                                                                0.0s
+ => => naming to ghcr.io/hooubis/terraform-env:1.0.0                                                                                                                  0.0s
+ => => unpacking to ghcr.io/hooubis/terraform-env:1.0.0                                                                                                               0.0s
+➜  terraform-env git:(dev3) ✗ docker push "$IMG"                                                      
+The push refers to repository [ghcr.io/hooubis/terraform-env]
+c209c8396e69: Pushed 
+4f4fb700ef54: Pushed 
+fdf67ba0bcdc: Pushed 
+abf3d33048f2: Pushed 
+a4c7e4728456: Pushed 
+1fdce4b05c85: Pushed 
+db895700c986: Pushed 
+1.0.0: digest: sha256:afcc8a43ed116fd9b5b42dbf2d65404acc5e4f503a5d3b5b0ebba78a3b08e9a7 size: 856
+➜  terraform-env git:(dev3) ✗ 
 ```
 
 Quick example:
