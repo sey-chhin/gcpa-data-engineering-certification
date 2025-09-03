@@ -132,6 +132,13 @@ db895700c986: Pushed
 ➜  terraform-env git:(dev3) ✗ 
 ```
 
+# github settings
+![alt text](image.png)
+
+>[!NOTE]
+> user must have PAT setup in order to run docker push 
+
+```
 Quick example:
 
 IMAGE=ghcr.io/<OWNER>/myapp:latest
@@ -157,6 +164,6 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/myapp:latest
-
+```
 
 If you literally wanted github.io: GitHub Pages hosts static files only. You’d build your site (optionally with Docker), then publish the static output to Pages—not the container image.
