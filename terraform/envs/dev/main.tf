@@ -25,6 +25,7 @@ module "networking" {
   network_name = var.vpc_name
   subnets      = var.subnets
   subnet_cidrs = var.subnet_cidrs
+  allowed_cidr = var.allowed_cidr
 }
 
 module "iam" {

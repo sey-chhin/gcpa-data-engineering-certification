@@ -3,43 +3,34 @@ name: TF Destroy (from saved state)
 on:
   workflow_dispatch:
     inputs:
-      project_id:
-        description: "GCP project ID"
-        required: true
-      region:
-        description: "Region (e.g., us-east4)"
-        required: true
-        default: us-east4
-      zone:
-        description: Zone (e.g., us-east4-c)
-        required: true
-        default: us-east4-c
       run_id:
         description: "GitHub Actions run ID that produced the state artifact"
         required: true
       artifact_name:
-        description: "Extract artifact name (default: tfstate-<run_id>-<attempt>); override if needed"
+        description: "Artifact name (default: tfstate-<run_id>-<attempt>)"
         required: false
         default: ""
 
 permissions:
   contents: read
-  id-token: write   # for GCP Workload Identity Federation
-  actions: read     # needed to fetch artifacts from the given run
+  id-token: write
+  actions: read
 
 env:
   TF_IN_AUTOMATION: true
   TF_INPUT: false
   TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION:     ${{ secrets.GCP_REGION }}
+  GCP_ZONE:       ${{ secrets.GCP_ZONE }}
+  ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}
 
 jobs:
   destroy:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      # ---- Auth to Google Cloud (no gcloud init needed) ----
       - name: Auth to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
         with:
@@ -49,23 +40,17 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
 
-      # ---- Fetch the tfstate artifact from the prior run ----
       - name: Resolve & download state artifact
         id: get_art
         shell: bash
         run: |
           set -euo pipefail
           RUN_ID="${{ inputs.run_id }}"
-          # Find artifacts for that run
-          JSON=$(gh api \
-            -H "Accept: application/vnd.github+json" \
+          JSON=$(gh api -H "Accept: application/vnd.github+json" \
             /repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts)
 
-          # Derive default artifact name if not provided: tfstate-<run_id>-<attempt>
           if [[ -z "${{ inputs.artifact_name }}" ]]; then
-            # Pull attempt from the run data
-            ATTEMPT=$(gh api \
-              -H "Accept: application/vnd.github+json" \
+            ATTEMPT=$(gh api -H "Accept: application/vnd.github+json" \
               /repos/${{ github.repository }}/actions/runs/${RUN_ID} --jq '.run_attempt')
             ART_NAME="tfstate-${RUN_ID}-${ATTEMPT}"
           else
@@ -83,24 +68,19 @@ jobs:
           fi
 
           mkdir -p terraform/tfstate
-          gh api \
-            -H "Accept: application/vnd.github+json" \
+          gh api -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             /repos/${{ github.repository }}/actions/artifacts/${ART_ID}/zip > /tmp/state.zip
-
           unzip -o /tmp/state.zip -d terraform/tfstate
           ls -al terraform/tfstate
-
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---- Use LOCAL backend with the downloaded state ----
       - name: Init (local backend) & destroy
         working-directory: terraform
         shell: bash
         run: |
           set -euo pipefail
-          # Ensure a local backend (no remote bucket)
           cat > backend_local.tf <<'HCL'
           terraform {
             backend "local" {
@@ -110,19 +90,16 @@ jobs:
           }
           HCL
 
-          # Initialize with local backend (uses downloaded tfstate)
           terraform init -reconfigure
-
-          # Sanity: show resources Terraform thinks exist
           terraform state list || true
 
-          # Destroy everything tracked by this state
+          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
           terraform destroy \
-            -var="project_id=${{ inputs.project_id }}" \
-            -var="region=${{ inputs.region }}" \
-            -var="zone=${{ inputs.zone }}"
+            -var="project_id=${GCP_PROJECT_ID}" \
+            -var="region=${GCP_REGION}" \
+            -var="zone=${GCP_ZONE}" \
+            -var="allowed_cidr=${CIDR}"
 
-      # Optional: clean up the temporary backend file
       - name: Cleanup
         if: always()
         working-directory: terraform

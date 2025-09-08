@@ -69,3 +69,9 @@ variable "subnet_cidrs" {
   type        = map(string)
 }
 # Add your variable declarations here
+
+variable "allowed_cidr" {
+  description = "CIDR allowed to reach HTTP/HTTPS on the VM"
+  type        = string
+  default     = "0.0.0.0/0"
+}

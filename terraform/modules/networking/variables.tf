@@ -45,3 +45,9 @@ variable "enable_nat" {
   type        = bool
   default     = false
 }
+
+variable "allowed_cidr" {
+  description = "CIDR allowed to reach HTTP/HTTPS on the VM"
+  type        = string
+  default     = "0.0.0.0/0"
+}
