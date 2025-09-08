@@ -56,15 +56,15 @@ resource "google_compute_network" "vpc" {
 
 # Subnets with Flow Logs and Private Google Access
 resource "google_compute_subnetwork" "subnets" {
-  for_each                  = { for s in var.subnets : "${s.region}-${s.name}" => s }
-  name                      = each.value.name
-  project                   = google_project.project.project_id
-  region                    = each.value.region
-  network                   = google_compute_network.vpc.self_link
-  ip_cidr_range             = each.value.ip_cidr_range
-  private_ip_google_access  = lookup(each.value, "private_google_access", true)
-  purpose                   = "PRIVATE"
-  role                      = "ACTIVE"
+  for_each                 = { for s in var.subnets : "${s.region}-${s.name}" => s }
+  name                     = each.value.name
+  project                  = google_project.project.project_id
+  region                   = each.value.region
+  network                  = google_compute_network.vpc.self_link
+  ip_cidr_range            = each.value.ip_cidr_range
+  private_ip_google_access = lookup(each.value, "private_google_access", true)
+  purpose                  = "PRIVATE"
+  role                     = "ACTIVE"
 
   dynamic "log_config" {
     for_each = lookup(each.value, "flow_logs", true) ? [1] : []
@@ -91,18 +91,18 @@ resource "google_compute_router" "router" {
 
 # Cloud NAT for egress-only internet access
 resource "google_compute_router_nat" "nat" {
-  for_each                             = local.subnet_regions
-  name                                 = "nat-${each.key}"
-  project                              = google_project.project.project_id
-  router                               = google_compute_router.router[each.key].name
-  region                               = each.key
-  nat_ip_allocate_option               = "AUTO_ONLY"
-  source_subnetwork_ip_ranges_to_nat   = "ALL_SUBNETWORKS_ALL_IP_RANGES"
-  enable_endpoint_independent_mapping  = true
-  udp_idle_timeout_sec                 = 30
-  tcp_established_idle_timeout_sec     = 1200
-  tcp_transitory_idle_timeout_sec      = 30
-  icmp_idle_timeout_sec                = 30
+  for_each                            = local.subnet_regions
+  name                                = "nat-${each.key}"
+  project                             = google_project.project.project_id
+  router                              = google_compute_router.router[each.key].name
+  region                              = each.key
+  nat_ip_allocate_option              = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat  = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  enable_endpoint_independent_mapping = true
+  udp_idle_timeout_sec                = 30
+  tcp_established_idle_timeout_sec    = 1200
+  tcp_transitory_idle_timeout_sec     = 30
+  icmp_idle_timeout_sec               = 30
   log_config {
     enable = true
     filter = "ALL"
@@ -143,12 +143,7 @@ resource "google_compute_firewall" "allow_iap_ssh" {
 # --------------------
 # Identity: Service Account & IAM
 # --------------------
-resource "google_service_account" "workload" {
-  project      = google_project.project.project_id
-  account_id   = var.workload_sa_id
-  display_name = var.workload_sa_display_name
-  description  = "Workload service account for applications in ${var.project_id}"
-}
+
 
 # Expand role->members map into (role, member) pairs
 locals {

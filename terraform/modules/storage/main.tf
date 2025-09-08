@@ -4,6 +4,6 @@ resource "google_storage_bucket" "bucket" {
   project                     = var.project_id
   location                    = each.value.location
   uniform_bucket_level_access = true
-
-  versioning { enabled = true }
+# Versioning off to minimize cost in labs
+  versioning { enabled = false }
 }

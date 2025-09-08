@@ -90,3 +90,6 @@ terraform apply \
   -var="billing_account=${BILLING_ACCOUNT}" \
   -var="org_id=${ORG_ID}"
 
+
+  
+

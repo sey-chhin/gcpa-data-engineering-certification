@@ -1,0 +1,138 @@
+name: TF Apply (ephemeral GCS state)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: GCP project ID to deploy into
+        required: true
+      region:
+        description: Default region
+        required: true
+        default: us-east4
+
+permissions:
+  contents: read
+  id-token: write     # needed for Workload Identity Federation
+
+env:
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TF_CLI_ARGS_init: -input=false
+  TF_CLI_ARGS_apply: -auto-approve -lock-timeout=5m
+  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: tf-ephemeral-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Auth to Google Cloud ---
+      # Prefer Workload Identity Federation (no key). If you use a key, see the swap below.
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account:           ${{ secrets.GCP_WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: hashicorp/setup-terraform@v3
+
+      # --- Create a *temporary* bucket for this run and write backend.hcl ---
+      - name: Create temp state bucket
+        id: mkbucket
+        working-directory: terraform
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Unique, lowercase bucket name (global namespace)
+          BUCKET="tfstate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$$"
+          BUCKET="$(echo "$BUCKET" | tr '[:upper:]' '[:lower:]')"
+          echo "STATE_BUCKET=$BUCKET" >> "$GITHUB_ENV"
+
+          # Create (you need Storage Admin in the project)
+          gsutil mb -p "${{ inputs.project_id }}" -l us-central1 "gs://${BUCKET}"
+
+          # Safety: auto-delete objects if cleanup step somehow fails
+          cat > lifecycle.json <<'JSON'
+          {"rule":[{"action":{"type":"Delete"},"condition":{"age":2}}]}
+          JSON
+          gsutil lifecycle set lifecycle.json "gs://${BUCKET}"
+
+          # Backend for this run (single workspace 'default')
+          cat > backend.hcl <<HCL
+          bucket = "${BUCKET}"
+          prefix = "state"
+          HCL
+          echo "Created temp bucket: gs://${BUCKET}"
+
+      # --- Init against the ephemeral backend ---
+      - name: Terraform init (ephemeral backend)
+        working-directory: terraform
+        run: terraform init -reconfigure -backend-config=backend.hcl
+
+      # --- Validate / Plan / Apply ---
+      - name: Format & Validate
+        working-directory: terraform
+        run: |
+          terraform fmt -recursive
+          terraform validate
+
+      - name: Plan
+        id: plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="project_id=${{ inputs.project_id }}" \
+            -var="region=${{ inputs.region }}" \
+            -out=tfplan.bin
+          terraform show -no-color tfplan.bin > tfplan.txt
+
+      - name: Apply
+        working-directory: terraform
+        run: terraform apply -input=false tfplan.bin
+
+      # --- Save a copy of state as an artifact (emergency rollback) ---
+      - name: Snapshot state (artifact)
+        if: always()        # capture even if apply failed half way
+        working-directory: terraform
+        shell: bash
+        run: |
+          mkdir -p tfstate
+          # Default workspace path in GCS backend:
+          gsutil cp "gs://${STATE_BUCKET}/state/default.tfstate" tfstate/terraform.tfstate || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tfstate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: terraform/tfstate/
+
+      # --- Destroy on failure to avoid leaks ---
+      - name: Destroy on failure
+        if: failure()
+        working-directory: terraform
+        run: terraform destroy \
+               -var="project_id=${{ inputs.project_id }}" \
+               -var="region=${{ inputs.region }}"
+
+      # --- Always delete the temp bucket at the very end ---
+      - name: Delete temp bucket
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${STATE_BUCKET:-}" ]]; then
+            echo "Deleting gs://${STATE_BUCKET} ..."
+            gsutil -m rm -r "gs://${STATE_BUCKET}" || true
+          fi
+
+      # Optional: upload plan text for review
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tfplan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: terraform/tfplan.txt
