@@ -113,11 +113,15 @@ jobs:
 
       # Save local state and a human-readable plan for later destroy/auditing
       - name: Upload state artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tfstate-${{ github.run_id }}-${{ github.run_attempt }}
-          path: terraform/tfstate/
+          name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
+          path: |
+            ../../${{ env.TF_WORKDIR }}/terraform.tfstate
+            ../../${{ env.TF_WORKDIR }}/terraform.tfstate.backup
+            ../../${{ env.TF_WORKDIR }}/tfplan.bin
+            ../../${{ env.TF_WORKDIR }}/tfplan.txt
+            ../../${{ env.TF_WORKDIR }}/.terraform.lock.hcl
 
       - name: Upload plan text
         if: always()
