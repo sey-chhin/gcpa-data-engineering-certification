@@ -40,6 +40,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
 
+      # retrieve state artifact from tf-apply-emphemeral-state CI run and store in tfstate/ local
       - name: Resolve & download state artifact
         id: get_art
         shell: bash
@@ -76,6 +77,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+        # initize local backend and destroy resources
       - name: Init (local backend) & destroy
         working-directory: terraform
         shell: bash
