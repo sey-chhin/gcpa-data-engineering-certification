@@ -50,35 +50,37 @@ jobs:
         run: |
           gcloud config unset auth/impersonate_service_account || true
           unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
+          unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT || true    # <-- add this
+          gcloud config get-value auth/impersonate_service_account || true
           gcloud auth list
-
-      - name: Set project
-        run: gcloud config set project "${{ env.GCP_PROJECT_ID }}"
 
       # Create a temporary GCS bucket for Terraform state (ephemeral backend)
       - name: Create temp state bucket
         id: mkbucket
         working-directory: terraform
         shell: bash
+        env:
+          STATE_LOC: ${{ secrets.GCP_STATE_BUCKET_LOCATION || 'us-central1' }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
           set -euo pipefail
           BUCKET="tfstate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$$"
-          BUCKET="${BUCKET,,}"  # lowercase for DNS-compliant GCS names
+          BUCKET="${BUCKET,,}"
           echo "STATE_BUCKET=$BUCKET" >> "$GITHUB_ENV"
 
-          gsutil mb -l "${GCP_STATE_BUCKET_LOCATION}" "gs://${BUCKET}"
+          # Use gsutil with explicit project; do NOT 'gcloud config set project'
+          gsutil -o "GSUtil:default_project_id=${GCP_PROJECT_ID}" mb -l "${STATE_LOC}" "gs://${BUCKET}"
 
-          # TTL safety in case cleanup is skipped
           cat > lifecycle.json <<'JSON'
           {"rule":[{"action":{"type":"Delete"},"condition":{"age":2}}]}
           JSON
-          gsutil lifecycle set lifecycle.json "gs://${BUCKET}"
+          gsutil -o "GSUtil:default_project_id=${GCP_PROJECT_ID}" lifecycle set lifecycle.json "gs://${BUCKET}"
 
-          # Inject ephemeral backend config for this run
           cat > backend.hcl <<HCL
           bucket = "${BUCKET}"
           prefix = "state"
           HCL
+
 
       - name: Terraform init
         working-directory: terraform
