@@ -83,7 +83,7 @@ jobs:
           unzip -o /tmp/state.zip -d terraform/tfstate
           ls -al terraform/tfstate
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_IO_SCHHIN }}
 
       - name: Clear any impersonation env
         shell: bash
