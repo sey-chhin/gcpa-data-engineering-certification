@@ -42,47 +42,47 @@ resource "google_compute_router_nat" "nat" {
   }
 }
 
-resource "google_compute_firewall" "allow_http" {
-  name    = "${var.vpc_name}-allow-http"
-  network = google_compute_network.vpc.name
-  project = var.project_id
+# resource "google_compute_firewall" "allow_http" {
+#   name    = "${var.vpc_name}-allow-http"
+#   network = google_compute_network.vpc.name
+#   project = var.project_id
 
-  allow {
-    protocol = "tcp"
-    ports    = ["80"]
-  }
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["80"]
+#   }
 
-  direction   = "INGRESS"
-  source_ranges = [var.allowed_cidr]
-  target_tags   = ["test-server1"]
-}
+#   direction   = "INGRESS"
+#   source_ranges = [var.allowed_cidr]
+#   target_tags   = ["test-server1"]
+# }
 
-resource "google_compute_firewall" "allow_https" {
-  name    = "${var.vpc_name}-allow-https"
-  network = google_compute_network.vpc.name
-  project = var.project_id
+# resource "google_compute_firewall" "allow_https" {
+#   name    = "${var.vpc_name}-allow-https"
+#   network = google_compute_network.vpc.name
+#   project = var.project_id
 
-  allow {
-    protocol = "tcp"
-    ports    = ["443"]
-  }
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["443"]
+#   }
 
-  direction   = "INGRESS"
-  source_ranges = [var.allowed_cidr]
-  target_tags   = ["test-server1"]
-}
+#   direction   = "INGRESS"
+#   source_ranges = [var.allowed_cidr]
+#   target_tags   = ["test-server1"]
+# }
 
-resource "google_compute_firewall" "allow_ssh" {
-  name    = "${var.vpc_name}-allow-ssh"
-  network = google_compute_network.vpc.name
-  project = var.project_id
+# resource "google_compute_firewall" "allow_ssh" {
+#   name    = "${var.vpc_name}-allow-ssh"
+#   network = google_compute_network.vpc.name
+#   project = var.project_id
 
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
-  }
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["22"]
+#   }
 
-  direction   = "INGRESS"
-  source_ranges = [var.allowed_cidr]
-  target_tags   = ["test-server1"]
-}
+#   direction   = "INGRESS"
+#   source_ranges = [var.allowed_cidr]
+#   target_tags   = ["test-server1"]
+# }
