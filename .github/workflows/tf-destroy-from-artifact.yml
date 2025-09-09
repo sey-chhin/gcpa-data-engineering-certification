@@ -29,7 +29,8 @@ env:
 jobs:
   destroy:
     runs-on: ubuntu-latest
-
+    environment: gcpa-variables
+    
     steps:
       - uses: actions/checkout@v4
 
