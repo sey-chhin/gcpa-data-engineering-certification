@@ -25,7 +25,7 @@ env:
   GCP_REGION:     ${{ secrets.GCP_REGION }}
   GCP_ZONE:       ${{ secrets.GCP_ZONE }}
   ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}
-
+  TF_WORKDIR: terraform/envs/dev
   TF_IN_AUTOMATION: true
   TF_INPUT: false
   TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
@@ -89,7 +89,7 @@ jobs:
 
       # Point Terraform to the downloaded local state and destroy
       - name: Init (local backend) & destroy
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         shell: bash
         run: |
           set -euo pipefail
@@ -114,5 +114,5 @@ jobs:
 
       - name: Cleanup
         if: always()
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         run: rm -f backend_local.tf || true

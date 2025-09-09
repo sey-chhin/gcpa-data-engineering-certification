@@ -18,7 +18,7 @@ env:
   GCP_REGION:     ${{ secrets.GCP_REGION }}
   GCP_ZONE:       ${{ secrets.GCP_ZONE }}
   ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}   # e.g., 203.0.113.45/32
-
+  TF_WORKDIR: terraform/envs/dev
   TF_IN_AUTOMATION: true
   TF_INPUT: false
   TF_CLI_ARGS_apply: -auto-approve -lock-timeout=5m
@@ -43,7 +43,7 @@ jobs:
 
       # Configure a per-run local backend; state stays in repo workspace and is uploaded as an artifact
       - name: Configure local backend (per-run)
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         shell: bash
         run: |
           set -euo pipefail
@@ -56,19 +56,29 @@ jobs:
           }
           HCL
 
+      - name: Debug TF workdir
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          pwd
+          ls -la
+          echo "----"
+          grep -Hn 'variable "' *.tf || true
+
+
       - name: Terraform init
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         run: terraform init -reconfigure
 
       - name: Format & Validate
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         run: |
           terraform fmt -recursive
           terraform validate
 
       - name: Plan
         id: plan
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         shell: bash
         run: |
           CIDR="${ALLOWED_CIDR}"
@@ -81,7 +91,7 @@ jobs:
           terraform show -no-color tfplan.bin > tfplan.txt
 
       - name: Apply
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         run: terraform apply -input=false tfplan.bin
 
       # Save local state and a human-readable plan for later destroy/auditing
@@ -102,5 +112,5 @@ jobs:
       # Optional: clean up the generated backend file
       - name: Cleanup backend file
         if: always()
-        working-directory: terraform
+        working-directory: ${{ env.TF_WORKDIR }}
         run: rm -f backend_local.tf || true

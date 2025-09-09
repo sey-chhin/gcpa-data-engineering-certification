@@ -35,7 +35,7 @@ storage_buckets = [
   { name = "pde-exam-bucket-1", location = "US" }
 ]
 
-region = "us-east4"
+# region = "us-east4"
 
 
 # e2 machines
