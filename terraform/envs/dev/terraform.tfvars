@@ -26,10 +26,6 @@ subnets = [
 # workload_sa_id           = "runtime-sa"
 # workload_sa_display_name = "Runtime Service Account"
 
-iam_bindings = [
-  { role = "roles/viewer", member = "user:schhin@gmail.com" },
-  { role = "roles/storage.admin", member = "user:schhin@gmail.com" }
-]
 
 storage_buckets = [
   { name = "pde-exam-bucket-1", location = "US" }

@@ -29,14 +29,6 @@ module "networking" {
   allowed_cidr = var.allowed_cidr
 }
 
-module "iam" {
-  source     = "../../modules/iam"
-  project_id = var.project_id
-  bindings = [
-    { role = "roles/storage.admin", member = "user:schhin@gmail.com" },
-    { role = "roles/viewer", member = "user:schhin@gmail.com" }
-  ]
-}
 
 module "storage" {
   source     = "../../modules/storage"

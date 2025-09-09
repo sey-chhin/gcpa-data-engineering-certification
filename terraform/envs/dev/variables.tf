@@ -15,12 +15,7 @@ variable "subnets" {
   }))
 }
 
-variable "iam_bindings" {
-  type = list(object({
-    role   = string
-    member = string
-  }))
-}
+
 variable "storage_buckets" {
   type = list(object({
     name     = string
