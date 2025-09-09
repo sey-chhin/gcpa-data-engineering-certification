@@ -52,7 +52,6 @@ jobs:
           terraform {
             backend "local" {
               path = "tfstate/terraform.tfstate"
-              lock = true
             }
           }
           HCL

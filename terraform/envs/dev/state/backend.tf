@@ -2,6 +2,6 @@
 terraform {
   backend "local" {
     path = "state/terraform.tfstate"
-    lock = true
+    # lock = true
   }
 }
