@@ -68,14 +68,20 @@ jobs:
           BUCKET="${BUCKET,,}"
           echo "STATE_BUCKET=$BUCKET" >> "$GITHUB_ENV"
 
-          # Use gsutil with explicit project; do NOT 'gcloud config set project'
-          gsutil -o "GSUtil:default_project_id=${GCP_PROJECT_ID}" mb -l "${STATE_LOC}" "gs://${BUCKET}"
+          # Create bucket (no gcloud config mutation; pass project inline)
+          gcloud storage buckets create "gs://${BUCKET}" \
+            --project="${GCP_PROJECT_ID}" \
+            --location="${STATE_LOC}"
 
+          # Set 2-day lifecycle so leftovers self-clean
           cat > lifecycle.json <<'JSON'
           {"rule":[{"action":{"type":"Delete"},"condition":{"age":2}}]}
           JSON
-          gsutil -o "GSUtil:default_project_id=${GCP_PROJECT_ID}" lifecycle set lifecycle.json "gs://${BUCKET}"
+          gcloud storage buckets update "gs://${BUCKET}" \
+            --project="${GCP_PROJECT_ID}" \
+            --lifecycle-file=lifecycle.json
 
+          # Inject ephemeral backend config
           cat > backend.hcl <<HCL
           bucket = "${BUCKET}"
           prefix = "state"
