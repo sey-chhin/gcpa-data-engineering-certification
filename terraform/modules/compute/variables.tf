@@ -139,3 +139,9 @@ variable "shield_enable_vtpm" {
   type        = bool
   default     = true
 }
+
+variable "service_account_email" {
+  type        = string
+  default     = null
+  description = "If set, VM will run as this SA; otherwise default Compute Engine SA."
+}

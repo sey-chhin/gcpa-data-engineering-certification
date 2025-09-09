@@ -1,12 +1,12 @@
-data "google_project" "this" {
-  project_id = var.project_id
-}
+# data "google_project" "this" {
+#   project_id = var.project_id
+# }
 
-locals {
-  # <PROJECT_NUMBER>-compute@developer.gserviceaccount.com
-  default_compute_sa = "${data.google_project.this.number}-compute@developer.gserviceaccount.com"
-  vm_sa_email        = coalesce(var.service_account_email, local.default_compute_sa)
-}
+# locals {
+#   # <PROJECT_NUMBER>-compute@developer.gserviceaccount.com
+#   default_compute_sa = "${data.google_project.this.number}-compute@developer.gserviceaccount.com"
+#   vm_sa_email        = coalesce(var.service_account_email, local.default_compute_sa)
+# }
 
 resource "google_compute_instance" "vm" {
   name           = var.e2_name
@@ -48,9 +48,15 @@ resource "google_compute_instance" "vm" {
     enable_secure_boot          = var.shield_enable_secure_boot
     enable_vtpm                 = var.shield_enable_vtpm
   }
-
+  dynamic "service_account" {
+    for_each = var.service_account_email == null ? [1] : [var.service_account_email]
+    content {
+      email  = var.service_account_email == null ? null : service_account.value
+      scopes = var.scopes
+    }
+  }
   service_account {
-    email  = local.vm_sa_email
+    # email  = local.vm_sa_email
     scopes = var.scopes
    }
 
