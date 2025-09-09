@@ -1,12 +1,22 @@
-variable "project_id" { type = string }
-variable "network_name" { type = string }
+variable "project_id" {
+  description = "The GCP project ID"
+  type        = string
+}
+
+variable "network_name" {
+  description = "The name of the network"
+  type        = string
+}
+
 variable "subnets" {
+  description = "List of subnet configurations"
   type = list(object({
     name   = string
     cidr   = string
     region = string
   }))
 }
+
 variable "labels" {
   description = "Labels applied to networking resources"
   type        = map(string)
@@ -23,11 +33,9 @@ variable "nat_logging" {
   default     = "ERRORS_ONLY"
 }
 
-# Add your variable declarations here
-
 variable "subnet_cidrs" {
-  type        = map(string)
   description = "Map of subnet_name => CIDR (e.g., { primary = \"10.10.0.0/24\" })"
+  type        = map(string)
 }
 
 variable "vpc_name" {

@@ -1,17 +1,45 @@
-variable "e2_name" {}
-variable "machine_type" {}
-variable "zone" {}
-variable "project_id" {}
-variable "boot_image" {}
+variable "e2_name" {
+  description = "Name of the VM instance"
+  type        = string
+}
+
+variable "machine_type" {
+  description = "Machine type for the VM"
+  type        = string
+}
+
+variable "zone" {
+  description = "GCP zone for the VM"
+  type        = string
+}
+
+variable "project_id" {
+  description = "GCP project ID"
+  type        = string
+}
+
+variable "boot_image" {
+  description = "Boot image for the VM"
+  type        = string
+}
+
 variable "disk_size_gb" {
-  default = 10
-  type    = number
+  description = "Size of the boot disk in GB"
+  type        = number
+  default     = 10
 }
+
 variable "disk_type" {
-  type    = string
-  default = "pd-balanced"
+  description = "Type of the boot disk"
+  type        = string
+  default     = "pd-balanced"
 }
-variable "vpc_name" {}
+
+variable "vpc_name" {
+  description = "Name of the VPC"
+  type        = string
+}
+
 variable "subnetwork" {
   description = "Subnetwork (name or self_link) for the VM NIC"
   type        = string
@@ -22,14 +50,19 @@ variable "service_account_email" {
   type        = string
   default     = null
 }
+
 variable "scopes" {
-  type    = list(string)
-  default = ["https://www.googleapis.com/auth/cloud-platform"]
+  description = "OAuth scopes for the VM"
+  type        = list(string)
+  default     = ["https://www.googleapis.com/auth/cloud-platform"]
 }
+
 variable "tags" {
-  type    = list(string)
-  default = []
+  description = "Network tags for the VM"
+  type        = list(string)
+  default     = []
 }
+
 variable "labels" {
   description = "Labels applied to networking resources"
   type        = map(string)
@@ -46,7 +79,6 @@ variable "nat_logging" {
   type        = string
   default     = "ERRORS_ONLY"
 }
-
 
 variable "network_tier" {
   description = "Network tier for external access_config"
@@ -91,14 +123,19 @@ variable "provisioning_model" {
 }
 
 variable "shield_enable_integrity_monitoring" {
-  type    = bool
-  default = true
+  description = "Enable Shielded VM integrity monitoring"
+  type        = bool
+  default     = true
 }
+
 variable "shield_enable_secure_boot" {
-  type    = bool
-  default = false
+  description = "Enable Shielded VM secure boot"
+  type        = bool
+  default     = false
 }
+
 variable "shield_enable_vtpm" {
-  type    = bool
-  default = true
+  description = "Enable Shielded VM vTPM"
+  type        = bool
+  default     = true
 }

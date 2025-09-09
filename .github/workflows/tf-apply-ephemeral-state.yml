@@ -71,7 +71,7 @@ jobs:
         working-directory: terraform
         shell: bash
         run: |
-          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
+          CIDR="${ALLOWED_CIDR}"
           terraform plan \
             -var="project_id=${GCP_PROJECT_ID}" \
             -var="region=${GCP_REGION}" \

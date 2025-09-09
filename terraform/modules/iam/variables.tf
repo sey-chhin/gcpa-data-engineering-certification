@@ -1,5 +1,7 @@
-variable "project_id" { type = string }
-
+variable "project_id" {
+  description = "The GCP project ID"
+  type        = string
+}
 
 variable "bindings" {
   description = "Either list of { role, member } or list of { role, members=[...] }"
@@ -9,7 +11,6 @@ variable "bindings" {
     members = optional(list(string))
   }))
 }
-
 
 variable "labels" {
   description = "Labels applied to networking resources"
