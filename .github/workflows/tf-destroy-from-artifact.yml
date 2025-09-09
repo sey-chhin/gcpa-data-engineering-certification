@@ -1,10 +1,10 @@
-name: TF Destroy (from saved state)
+name: TF Destroy (from saved local state artifact)
 
 on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "GitHub Actions run ID that produced the state artifact"
+        description: "Run ID that produced the state artifact"
         required: true
       artifact_name:
         description: "Artifact name (default: tfstate-<run_id>-<attempt>)"
@@ -13,8 +13,8 @@ on:
 
 permissions:
   contents: read
-  id-token: write          # OIDC to GCP
-  actions: read            # fetch artifacts from the referenced run
+  id-token: write     # OIDC to GCP for provider auth
+  actions: read       # needed to download artifacts from another run
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -44,26 +44,21 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account:           ${{ secrets.GCP_WIF_SA }}
 
-      - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
 
-      - name: Clear gcloud impersonation
-        shell: bash
-        run: |
-          gcloud config unset auth/impersonate_service_account || true
-          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
-          gcloud auth list
-
-      # Download the saved tfstate from the specified run
+      # Download the saved local state artifact from the apply run
       - name: Resolve & download state artifact
         id: get_art
         shell: bash
         run: |
           set -euo pipefail
           RUN_ID="${{ inputs.run_id }}"
+
+          # Fetch list of artifacts for that run
           JSON=$(gh api -H "Accept: application/vnd.github+json" \
             /repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts)
 
+          # Determine artifact name
           if [[ -z "${{ inputs.artifact_name }}" ]]; then
             ATTEMPT=$(gh api -H "Accept: application/vnd.github+json" \
               /repos/${{ github.repository }}/actions/runs/${RUN_ID} --jq '.run_attempt')
@@ -71,17 +66,18 @@ jobs:
           else
             ART_NAME="${{ inputs.artifact_name }}"
           fi
+          echo "Artifact name: $ART_NAME"
 
-          echo "Looking for artifact: ${ART_NAME}"
+          # Find artifact id
           ART_ID=$(echo "$JSON" | jq -r --arg NAME "$ART_NAME" '.artifacts[] | select(.name==$NAME) | .id')
-
           if [[ -z "$ART_ID" || "$ART_ID" == "null" ]]; then
-            echo "Artifact '${ART_NAME}' not found for run ${RUN_ID}"
+            echo "Artifact '$ART_NAME' not found for run ${RUN_ID}"
             echo "Available artifacts:"
             echo "$JSON" | jq -r '.artifacts[].name'
             exit 1
           fi
 
+          # Download & extract
           mkdir -p terraform/tfstate
           gh api -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -91,7 +87,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Use local backend pointing to the downloaded state and destroy
+      # Point Terraform to the downloaded local state and destroy
       - name: Init (local backend) & destroy
         working-directory: terraform
         shell: bash
@@ -109,7 +105,7 @@ jobs:
           terraform init -reconfigure
           terraform state list || true
 
-          CIDR="${{ secrets.ALLOWED_CIDR }}"
+          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
           terraform destroy \
             -var="project_id=${GCP_PROJECT_ID}" \
             -var="region=${GCP_REGION}" \
