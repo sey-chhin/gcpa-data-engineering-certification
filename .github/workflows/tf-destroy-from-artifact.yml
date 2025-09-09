@@ -1,129 +1,81 @@
-name: TF Destroy (from saved local state artifact)
+name: tf-destroy-from-artifact
 
 on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Run ID that produced the state artifact"
+        description: "Workflow run ID that produced the state artifact (numeric)"
         required: true
       artifact_name:
-        description: "Artifact name (default: tfstate-<run_id>-<attempt>)"
-        required: false
-        default: ""
+        description: "Artifact name (e.g. tfstate-<run_id>-<attempt>)"
+        required: true
 
 permissions:
-  contents: read
-  id-token: write     # OIDC to GCP for provider auth
-  actions: read       # needed to download artifacts from another run
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  id-token: write     # for google-github-actions/auth (WIF)
+  contents: read      # checkout
+  actions: read       # allow download-artifact by run-id
 
 env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION:     ${{ secrets.GCP_REGION }}
-  GCP_ZONE:       ${{ secrets.GCP_ZONE }}
-  ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}
-  TF_WORKDIR: terraform/envs/dev
-  TF_IN_AUTOMATION: true
-  TF_INPUT: false
-  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+  # Passed as job env so we don’t keep repeating
+  GCP_PROJECT_ID:       ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION:           ${{ secrets.GCP_REGION }}
+  GCP_ZONE:             ${{ secrets.GCP_ZONE }}
+  ALLOWED_CIDR:         ${{ secrets.ALLOWED_CIDR }}
+  TF_WORKDIR:           terraform/envs/dev
+  TF_IN_AUTOMATION:     "true"
+  TF_INPUT:             "false"
+  TF_CLI_ARGS_destroy:  "-auto-approve -lock-timeout=5m"
 
 jobs:
   destroy:
     runs-on: ubuntu-latest
-    environment: gcpa-variables
 
     steps:
       - uses: actions/checkout@v4
 
+      # OIDC -> short-lived ADC for Google provider
       - name: Auth to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account:           ${{ secrets.GCP_WIF_SA }}
+          create_credentials_file:   true
+          export_environment_variables: true
 
-      # Download the saved local state artifact from the apply run
-      - name: Resolve & download state artifact
-        id: get_art
-        shell: bash
-        run: |
-          set -euo pipefail
-          RUN_ID="${{ inputs.run_id }}"
-
-          # Fetch list of artifacts for that run
-          JSON=$(gh api -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts)
-
-          # Determine artifact name
-          if [[ -z "${{ inputs.artifact_name }}" ]]; then
-            ATTEMPT=$(gh api -H "Accept: application/vnd.github+json" \
-              /repos/${{ github.repository }}/actions/runs/${RUN_ID} --jq '.run_attempt')
-            ART_NAME="tfstate-${RUN_ID}-${ATTEMPT}"
-          else
-            ART_NAME="${{ inputs.artifact_name }}"
-          fi
-          echo "Artifact name: $ART_NAME"
-
-          # Find artifact id
-          ART_ID=$(echo "$JSON" | jq -r --arg NAME "$ART_NAME" '.artifacts[] | select(.name==$NAME) | .id')
-          if [[ -z "$ART_ID" || "$ART_ID" == "null" ]]; then
-            echo "Artifact '$ART_NAME' not found for run ${RUN_ID}"
-            echo "Available artifacts:"
-            echo "$JSON" | jq -r '.artifacts[].name'
-            exit 1
-          fi
-
-          # Download & extract
-          mkdir -p terraform/tfstate
-          gh api -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/${{ github.repository }}/actions/artifacts/${ART_ID}/zip > /tmp/state.zip
-          unzip -o /tmp/state.zip -d terraform/tfstate
-          ls -al terraform/tfstate
-        env:
-          GH_TOKEN: ${{ secrets.GHCR_IO_SCHHIN }}
-
-      - name: Clear any impersonation env
-        shell: bash
-        run: |
-          # These can cause both gcloud and the Terraform Google provider to impersonate
-          unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
-          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT
-
-          echo "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=${GOOGLE_IMPERSONATE_SERVICE_ACCOUNT-<unset>}"
-          echo "CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT=${CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT-<unset>}"
-
-
+      - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
-      
-      # Point Terraform to the downloaded local state and destroy
-      - name: Init (local backend) & destroy
+
+      # ensure no stray impersonation set in gcloud
+      - name: Clear gcloud impersonation
+        shell: bash
+        run: |
+          gcloud config unset auth/impersonate_service_account || true
+          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
+          gcloud auth list
+
+      # download the state artifact created by the apply job
+      - name: Download state artifact
+        uses: actions/download-artifact@v4
+        with:
+          name:   ${{ inputs.artifact_name }}  # e.g. tfstate-17592363753-2
+          run-id: ${{ inputs.run_id }}         # e.g. 17592363753
+          path:   ${{ env.TF_WORKDIR }}/../../tfstate
+
+      - name: Show downloaded files
+        run: ls -al ${{ env.TF_WORKDIR }}/../../tfstate
+
+      # Terraform runs from the env directory which is configured for local backend
+      - name: Terraform init (local backend)
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform init -reconfigure
+
+      # Destroy using the downloaded local state
+      - name: Terraform destroy
         working-directory: ${{ env.TF_WORKDIR }}
         shell: bash
         run: |
-          set -euo pipefail
-          cat > backend_local.tf <<'HCL'
-          terraform {
-            backend "local" {
-              path = "tfstate/terraform.tfstate"
-              lock = true
-            }
-          }
-          HCL
-
-          terraform init -reconfigure
-          terraform state list || true
-
-          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
           terraform destroy \
             -var="project_id=${GCP_PROJECT_ID}" \
             -var="region=${GCP_REGION}" \
             -var="zone=${GCP_ZONE}" \
-            -var="allowed_cidr=${CIDR}"
-
-      - name: Cleanup
-        if: always()
-        working-directory: ${{ env.TF_WORKDIR }}
-        run: rm -f backend_local.tf || true
+            -var="allowed_cidr=${ALLOWED_CIDR}"
