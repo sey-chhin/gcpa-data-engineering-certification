@@ -5,33 +5,36 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  packages: read
+  id-token: write         # required for OIDC to GCP
+  packages: read          # only needed if you pull a private GHCR image
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
 env:
-  TF_IN_AUTOMATION: true
-  TF_INPUT: false
-  TF_CCLI_ARGS_apply: -auto-approve -lock-timeout=5m
-  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+  # Core config comes from repo secrets (set these in Settings → Secrets and variables → Actions)
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION:     ${{ secrets.GCP_REGION }}
   GCP_ZONE:       ${{ secrets.GCP_ZONE }}
-  # NEW: allow narrowing firewall via secret
-  ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}
-  GCP_STATE_BUCKET_LOCATION: ${{ secrets.GCP_STATE_BUCKET_LOCATION }}
+  ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}                    # e.g., 203.0.113.45/32
+  GCP_STATE_BUCKET_LOCATION: ${{ secrets.GCP_STATE_BUCKET_LOCATION || 'us-central1' }}
 
+  # Terraform automation ergonomics
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TF_CLI_ARGS_apply: -auto-approve -lock-timeout=5m
+  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
 
 jobs:
   apply:
     runs-on: ubuntu-latest
     environment: gcpa-variables
+
     steps:
       - uses: actions/checkout@v4
 
+      # Authenticate to GCP via OIDC (Workload Identity Federation)
       - name: Auth to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
         with:
@@ -41,7 +44,18 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
 
-      # create temp GCS bucket for state storage to allow CI destroy on after testing is completed
+      # Clear any impersonation leftover from base images/env to avoid conflicts
+      - name: Clear gcloud impersonation
+        shell: bash
+        run: |
+          gcloud config unset auth/impersonate_service_account || true
+          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
+          gcloud auth list
+
+      - name: Set project
+        run: gcloud config set project "${{ env.GCP_PROJECT_ID }}"
+
+      # Create a temporary GCS bucket for Terraform state (ephemeral backend)
       - name: Create temp state bucket
         id: mkbucket
         working-directory: terraform
@@ -49,15 +63,18 @@ jobs:
         run: |
           set -euo pipefail
           BUCKET="tfstate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$$"
-          BUCKET="${BUCKET,,}"
+          BUCKET="${BUCKET,,}"  # lowercase for DNS-compliant GCS names
           echo "STATE_BUCKET=$BUCKET" >> "$GITHUB_ENV"
 
-          gcloud config set project "${GCP_PROJECT_ID}"
           gsutil mb -l "${GCP_STATE_BUCKET_LOCATION}" "gs://${BUCKET}"
+
+          # TTL safety in case cleanup is skipped
           cat > lifecycle.json <<'JSON'
           {"rule":[{"action":{"type":"Delete"},"condition":{"age":2}}]}
           JSON
           gsutil lifecycle set lifecycle.json "gs://${BUCKET}"
+
+          # Inject ephemeral backend config for this run
           cat > backend.hcl <<HCL
           bucket = "${BUCKET}"
           prefix = "state"
@@ -67,21 +84,18 @@ jobs:
         working-directory: terraform
         run: terraform init -reconfigure -backend-config=backend.hcl
 
-        # standardizing formatting and validation
       - name: Format & Validate
         working-directory: terraform
         run: |
           terraform fmt -recursive
           terraform validate
 
-        # run terraform plan and save output to file prior to apply
       - name: Plan
         id: plan
         working-directory: terraform
         shell: bash
         run: |
-          # default to open if secret is empty/unset
-          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
+          CIDR="${{ secrets.ALLOWED_CIDR }}"
           terraform plan \
             -var="project_id=${GCP_PROJECT_ID}" \
             -var="region=${GCP_REGION}" \
@@ -92,11 +106,9 @@ jobs:
 
       - name: Apply
         working-directory: terraform
-        shell: bash
-        run: |
-          terraform apply -input=false tfplan.bin
+        run: terraform apply -input=false tfplan.bin
 
-        # store state as artifact to allow destroy in separate workflow
+      # Save state as artifact (belt & suspenders)
       - name: Snapshot state (artifact)
         if: always()
         working-directory: terraform
@@ -109,20 +121,21 @@ jobs:
         with:
           name: tfstate-${{ github.run_id }}-${{ github.run_attempt }}
           path: terraform/tfstate/
-        
-        # fail safely and destroy if apply fails
+
+      # Auto-destroy on failure to avoid resource leaks
       - name: Destroy on failure
         if: failure()
         working-directory: terraform
         shell: bash
         run: |
-          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
+          CIDR="${{ secrets.ALLOWED_CIDR }}"
           terraform destroy \
             -var="project_id=${GCP_PROJECT_ID}" \
             -var="region=${GCP_REGION}" \
             -var="zone=${GCP_ZONE}" \
             -var="allowed_cidr=${CIDR}"
 
+      # Always delete the temporary state bucket
       - name: Delete temp bucket
         if: always()
         shell: bash
@@ -131,6 +144,7 @@ jobs:
             gsutil -m rm -r "gs://${STATE_BUCKET}" || true
           fi
 
+      # Upload human-readable plan for auditing
       - uses: actions/upload-artifact@v4
         if: always()
         with:

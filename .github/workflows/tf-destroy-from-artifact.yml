@@ -13,26 +13,28 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  actions: read
+  id-token: write          # OIDC to GCP
+  actions: read            # fetch artifacts from the referenced run
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
 env:
-  TF_IN_AUTOMATION: true
-  TF_INPUT: false
-  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION:     ${{ secrets.GCP_REGION }}
   GCP_ZONE:       ${{ secrets.GCP_ZONE }}
   ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}
 
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+
 jobs:
   destroy:
     runs-on: ubuntu-latest
     environment: gcpa-variables
+
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +47,14 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
 
-      # retrieve state artifact from tf-apply-emphemeral-state CI run and store in tfstate/ local
+      - name: Clear gcloud impersonation
+        shell: bash
+        run: |
+          gcloud config unset auth/impersonate_service_account || true
+          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
+          gcloud auth list
+
+      # Download the saved tfstate from the specified run
       - name: Resolve & download state artifact
         id: get_art
         shell: bash
@@ -82,7 +91,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-        # initize local backend and destroy resources
+      # Use local backend pointing to the downloaded state and destroy
       - name: Init (local backend) & destroy
         working-directory: terraform
         shell: bash
@@ -100,7 +109,7 @@ jobs:
           terraform init -reconfigure
           terraform state list || true
 
-          CIDR="${ALLOWED_CIDR:-0.0.0.0/0}"
+          CIDR="${{ secrets.ALLOWED_CIDR }}"
           terraform destroy \
             -var="project_id=${GCP_PROJECT_ID}" \
             -var="region=${GCP_REGION}" \
