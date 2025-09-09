@@ -15,11 +15,11 @@ vpc_name = "vpc-sandbox"
 # backend_bucket = "pde-exam-bucket-1"
 
 subnet_cidrs = {
-  primary = "10.10.0.0/24"
+  primary = "10.0.0.0/24"
 }
 
 subnets = [
-  { name = "sandbox-use1", cidr = "10.0.0.0/20", region = "us-east4" },
+  { name = "sandbox-use1", cidr = "10.0.0.0/24", region = "us-east4" },
   #   { name = "sandbox-usc1", cidr = "10.1.0.0/20", region = "us-central1" }
 ]
 
@@ -40,7 +40,7 @@ e2_name           = "e2-sandbox"
 boot_image        = "projects/ubuntu-os-cloud/global/images/ubuntu-minimal-2504-plucky-amd64-v20250828"
 disk_size_gb      = "10"
 disk_type         = "pd-balanced"
-tags              = ["http-server", "https-server"]
+tags              = ["test-server1"]
 subnetwork        = "default"
 workload_sa_email = ""
 zone              = "us-east4-c"

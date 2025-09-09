@@ -34,7 +34,7 @@ variable "nat_logging" {
 }
 
 variable "subnet_cidrs" {
-  description = "Map of subnet_name => CIDR (e.g., { primary = \"10.10.0.0/24\" })"
+  description = "Map of subnet_name => CIDR (e.g., { primary = \"10.0.0.0/24\" })"
   type        = map(string)
 }
 

@@ -54,7 +54,7 @@ resource "google_compute_firewall" "allow_http" {
 
   direction   = "INGRESS"
   source_ranges = [var.allowed_cidr]
-  target_tags   = ["http-server"]
+  target_tags   = ["test-server1"]
 }
 
 resource "google_compute_firewall" "allow_https" {
@@ -69,7 +69,7 @@ resource "google_compute_firewall" "allow_https" {
 
   direction   = "INGRESS"
   source_ranges = [var.allowed_cidr]
-  target_tags   = ["https-server"]
+  target_tags   = ["test-server1"]
 }
 
 resource "google_compute_firewall" "allow_ssh" {
@@ -84,5 +84,5 @@ resource "google_compute_firewall" "allow_ssh" {
 
   direction   = "INGRESS"
   source_ranges = [var.allowed_cidr]
-  target_tags   = ["allow-ssh"]
+  target_tags   = ["test-server1"]
 }
