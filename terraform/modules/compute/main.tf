@@ -55,10 +55,10 @@ resource "google_compute_instance" "vm" {
       scopes = var.scopes
     }
   }
-  service_account {
-    # email  = local.vm_sa_email
-    scopes = var.scopes
-   }
+  # service_account {
+  #   # email  = local.vm_sa_email
+  #   scopes = var.scopes
+  #  }
 
 
   tags = var.tags
