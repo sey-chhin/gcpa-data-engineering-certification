@@ -60,7 +60,7 @@ jobs:
         with:
           name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
           run-id: ${{ inputs.run_id }}         # e.g. 17592363753
-          path:   ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate
+          # path:   ${{ env.TF_WORKDIR }}/tfstate
 
       - name: Show downloaded files
         run: ls -al ${{ env.TF_WORKDIR }}/tfstate
