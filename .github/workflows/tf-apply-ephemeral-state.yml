@@ -120,9 +120,6 @@ jobs:
           name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
           path: |
             ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate
-            ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate.backup
-            ${{ env.TF_WORKDIR }}/tfstate/tfplan.bin
-            ${{ env.TF_WORKDIR }}/tfstate/tfplan.txt
             ${{ env.TF_WORKDIR }}/tfstate/terraform.lock.hcl
           if-no-files-found: warn
           retention-days: 2

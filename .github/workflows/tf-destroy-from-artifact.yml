@@ -16,7 +16,6 @@ permissions:
   actions: read       # allow download-artifact by run-id
 
 env:
-  # Passed as job env so we don’t keep repeating
   GCP_PROJECT_ID:       ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION:           ${{ secrets.GCP_REGION }}
   GCP_ZONE:             ${{ secrets.GCP_ZONE }}
@@ -30,7 +29,7 @@ jobs:
   destroy:
     runs-on: ubuntu-latest
     environment: gcpa-variables
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -46,7 +45,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
 
-      # ensure no stray impersonation set in gcloud
+      # Ensure no stray impersonation set in gcloud
       - name: Clear gcloud impersonation
         shell: bash
         run: |
@@ -54,22 +53,72 @@ jobs:
           unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
           gcloud auth list
 
+      # Recreate the same local backend used by apply
+      - name: Configure local backend (per-run)
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tfstate
+          cat > backend_local.tf <<'HCL'
+          terraform {
+            backend "local" {
+              path = "tfstate/terraform.tfstate"
+            }
+          }
+          HCL
 
-      # download the state artifact created by the apply job
+      # (Helpful) list artifacts for the run so you can verify the exact name
+      - name: Debug list artifacts for run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}/artifacts \
+            --jq '.artifacts[] | {id: .id, name: .name, expired: .expired}'
+
+      # Download to a temp dir first (avoids nested paths)
       - name: Download state artifact
         uses: actions/download-artifact@v4
         with:
-          name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
-          run-id: ${{ inputs.run_id }}         # e.g. 17592363753
-          path:   ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate
+          name:   ${{ inputs.artifact_name }}    # e.g. tfstate-17623439956-1
+          run-id: ${{ inputs.run_id }}          # e.g. 17623439956
+          repository: ${{ github.repository }}
+          path:   _artifact_download
 
+      - name: Inspect downloaded artifact
+        run: |
+          echo "Artifact tree:"
+          find _artifact_download -maxdepth 4 -type f -printf '%P\n' | sort || true
 
-      # Terraform runs from the env directory which is configured for local backend
+      # Move state files into the exact path Terraform expects
+      # (Adjust the mv/glob below depending on what you uploaded in apply)
+      - name: Place state files
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Try common layouts:
+          # 1) If you uploaded just tfstate/* from apply
+          if compgen -G "_artifact_download/*.tfstate" > /dev/null; then
+            mv _artifact_download/*.tfstate "${{ env.TF_WORKDIR }}/tfstate/" || true
+            mv _artifact_download/*.backup "${{ env.TF_WORKDIR }}/tfstate/" || true
+            mv _artifact_download/tfplan.* "${{ env.TF_WORKDIR }}/tfstate/" || true
+            mv _artifact_download/terraform.lock.hcl "${{ env.TF_WORKDIR }}/tfstate/" || true
+          fi
+
+          # 2) If you uploaded the whole env folder (terraform/envs/dev/**)
+          if [ -d "_artifact_download/terraform/envs/dev/tfstate" ]; then
+            rsync -a "_artifact_download/terraform/envs/dev/tfstate/" "${{ env.TF_WORKDIR }}/tfstate/"
+          fi
+
+          echo "Final tfstate dir:"
+          ls -la "${{ env.TF_WORKDIR }}/tfstate"
+          test -f "${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate" || (echo "terraform.tfstate not found in tfstate/"; exit 1)
+
       - name: Terraform init (local backend)
         working-directory: ${{ env.TF_WORKDIR }}
         run: terraform init -reconfigure
 
-      # Destroy using the downloaded local state
       - name: Terraform destroy
         working-directory: ${{ env.TF_WORKDIR }}
         shell: bash
