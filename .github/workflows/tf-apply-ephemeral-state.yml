@@ -123,20 +123,6 @@ jobs:
             ${{ env.TF_WORKDIR }}/tfstate/terraform.lock.hcl
           if-no-files-found: warn
           retention-days: 2
-      # Save  state and a human-readable plan for later destroy/auditing
-      # - name: Upload Terraform outputs (state + plan + text)
-      #   if: always()
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
-      #     path: |
-      #       ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate
-      #       # ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate.backup
-      #       # ${{ env.TF_WORKDIR }}/tfstate/tfplan.bin
-      #       # ${{ env.TF_WORKDIR }}/tfstate/tfplan.txt
-      #       # ${{ env.TF_WORKDIR }}/tfstate/terraform.lock.hcl
-      #     if-no-files-found: warn
-      #     retention-days: 7
       
       # Optional: clean up the generated backend file
       - name: Cleanup backend file

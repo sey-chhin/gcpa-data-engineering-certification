@@ -88,34 +88,6 @@ jobs:
           path:   ${{ env.TF_WORKDIR }}/tfstate 
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Inspect downloaded artifact
-      #   run: |
-      #     echo "Artifact tree:"
-      #     find _artifact_download -maxdepth 4 -type f -printf '%P\n' | sort || true
-
-      # # Move state files into the exact path Terraform expects
-      # # (Adjust the mv/glob below depending on what you uploaded in apply)
-      # - name: Place state files
-      #   shell: bash
-      #   run: |
-      #     set -euo pipefail
-      #     # Try common layouts:
-      #     # 1) If you uploaded just tfstate/* from apply
-      #     if compgen -G "_artifact_download/*.tfstate" > /dev/null; then
-      #       mv _artifact_download/*.tfstate "${{ env.TF_WORKDIR }}/tfstate/" || true
-      #       mv _artifact_download/*.backup "${{ env.TF_WORKDIR }}/tfstate/" || true
-      #       mv _artifact_download/tfplan.* "${{ env.TF_WORKDIR }}/tfstate/" || true
-      #       mv _artifact_download/terraform.lock.hcl "${{ env.TF_WORKDIR }}/tfstate/" || true
-      #     fi
-
-      #     # 2) If you uploaded the whole env folder (terraform/envs/dev/**)
-      #     if [ -d "_artifact_download/terraform/envs/dev/tfstate" ]; then
-      #       rsync -a "_artifact_download/terraform/envs/dev/tfstate/" "${{ env.TF_WORKDIR }}/tfstate/"
-      #     fi
-
-      #     echo "Final tfstate dir:"
-      #     ls -la "${{ env.TF_WORKDIR }}/tfstate"
-      #     test -f "${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate" || (echo "terraform.tfstate not found in tfstate/"; exit 1)
 
       - name: Terraform init (local backend)
         working-directory: ${{ env.TF_WORKDIR }}
