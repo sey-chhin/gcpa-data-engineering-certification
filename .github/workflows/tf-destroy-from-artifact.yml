@@ -54,11 +54,10 @@ jobs:
           unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
           gcloud auth list
 
-          - uses: actions/download-artifact@v5
 
       # download the state artifact created by the apply job
       - name: Download state artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           # name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
           # run-id: ${{ inputs.run_id }}         # e.g. 17592363753
