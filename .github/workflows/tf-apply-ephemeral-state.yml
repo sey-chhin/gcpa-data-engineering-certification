@@ -118,7 +118,7 @@ jobs:
         with:
           name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
           path: |
-            ${{ env.TF_WORKDIR }}
+            ${{ github.repository }}/${{ env.TF_WORKDIR }}
           if-no-files-found: warn
           retention-days: 7
       # Save  state and a human-readable plan for later destroy/auditing
