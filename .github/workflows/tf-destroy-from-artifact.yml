@@ -84,7 +84,9 @@ jobs:
           name:   ${{ inputs.artifact_name }}    # e.g. tfstate-17623439956-1
           run-id: ${{ inputs.run_id }}          # e.g. 17623439956
           repository: ${{ github.repository }}
-          path:   _artifact_download
+          # path:   _artifact_download
+          path:   ${{ env.TF_WORKDIR }}/tfstate 
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Inspect downloaded artifact
         run: |
