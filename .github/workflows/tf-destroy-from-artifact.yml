@@ -54,6 +54,14 @@ jobs:
           unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
           gcloud auth list
 
+      - name: Show downloaded files
+        run: ls -al ${{ env.TF_WORKDIR }}/tfstate
+
+      - name: List available artifacts
+        run: gh run artifacts ${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # download the state artifact created by the apply job
       - name: Download state artifact
         uses: actions/download-artifact@v4
@@ -62,8 +70,7 @@ jobs:
           run-id: ${{ inputs.run_id }}         # e.g. 17592363753
           # path:   ${{ env.TF_WORKDIR }}/tfstate
 
-      - name: Show downloaded files
-        run: ls -al ${{ env.TF_WORKDIR }}/tfstate
+
 
       # Terraform runs from the env directory which is configured for local backend
       - name: Terraform init (local backend)
