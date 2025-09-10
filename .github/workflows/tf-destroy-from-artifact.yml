@@ -61,7 +61,7 @@ jobs:
         with:
           name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
           run-id: ${{ inputs.run_id }}         # e.g. 17592363753
-          path:   ${{ github.repository }}/${{ env.TF_WORKDIR }}
+          path:   ${{ env.TF_WORKDIR }}
 
 
       # Terraform runs from the env directory which is configured for local backend

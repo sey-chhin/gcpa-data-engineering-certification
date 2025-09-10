@@ -117,8 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
-          path: |
-            ${{ github.repository }}/${{ env.TF_WORKDIR }}
+          path: ${{ env.TF_WORKDIR }}
           if-no-files-found: warn
           retention-days: 2
       # Save  state and a human-readable plan for later destroy/auditing
