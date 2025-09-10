@@ -54,13 +54,6 @@ jobs:
           unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
           gcloud auth list
 
-      - name: Show downloaded files
-        run: ls -al ${{ env.TF_WORKDIR }}/tfstate
-
-      - name: List available artifacts
-        run: gh run artifacts ${{ github.run_id }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # download the state artifact created by the apply job
       - name: Download state artifact
@@ -68,7 +61,7 @@ jobs:
         with:
           name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
           run-id: ${{ inputs.run_id }}         # e.g. 17592363753
-          # path:   ${{ env.TF_WORKDIR }}/tfstate
+          path:   ${{ env.TF_WORKDIR }}/tfstate
 
 
 
