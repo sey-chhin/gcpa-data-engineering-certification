@@ -120,7 +120,7 @@ jobs:
           path: |
             ${{ github.repository }}/${{ env.TF_WORKDIR }}
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 2
       # Save  state and a human-readable plan for later destroy/auditing
       # - name: Upload Terraform outputs (state + plan + text)
       #   if: always()
