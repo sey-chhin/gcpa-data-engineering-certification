@@ -57,11 +57,11 @@ jobs:
 
       # download the state artifact created by the apply job
       - name: Download state artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
           run-id: ${{ inputs.run_id }}         # e.g. 17592363753
-          path:   ${{ env.TF_WORKDIR }}
+          path:   ${{ env.TF_WORKDIR }}/tfstate
 
 
       # Terraform runs from the env directory which is configured for local backend
