@@ -58,7 +58,7 @@ jobs:
       - name: Download state artifact
         uses: actions/download-artifact@v4
         with:
-          name:   ${{ inputs.artifact_name }}  # e.g. tfstate-17592363753-2
+          name:   ${{ inputs.artifact_name }} # e.g. tfstate-17592363753-2
           run-id: ${{ inputs.run_id }}         # e.g. 17592363753
           path:   ${{ env.TF_WORKDIR }}/tfstate
 

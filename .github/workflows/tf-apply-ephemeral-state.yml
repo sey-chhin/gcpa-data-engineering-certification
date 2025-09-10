@@ -111,24 +111,20 @@ jobs:
         working-directory: ${{ env.TF_WORKDIR }}
         run: terraform apply -input=false tfplan.bin
 
-      # Save local state and a human-readable plan for later destroy/auditing
-      - name: Upload state artifact
+      # Save  state and a human-readable plan for later destroy/auditing
+      - name: Upload Terraform outputs (state + plan + text)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
           path: |
-            ${{ env.TF_WORKDIR }}/terraform.tfstate
-            ${{ env.TF_WORKDIR }}/terraform.tfstate.backup
-            ${{ env.TF_WORKDIR }}/tfplan.bin
-            ${{ env.TF_WORKDIR }}/tfplan.txt
-            ${{ env.TF_WORKDIR }}/terraform.lock.hcl
-
-      - name: Upload plan text
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.TF_WORKDIR }}/tfplan.txt
+            ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate
+            ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate.backup
+            ${{ env.TF_WORKDIR }}/tfstate/tfplan.bin
+            ${{ env.TF_WORKDIR }}/tfstate/tfplan.txt
+            ${{ env.TF_WORKDIR }}/tfstate/terraform.lock.hcl
+          if-no-files-found: warn
+          retention-days: 7
 
       # Optional: clean up the generated backend file
       - name: Cleanup backend file
