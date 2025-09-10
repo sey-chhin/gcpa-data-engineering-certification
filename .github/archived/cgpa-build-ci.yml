@@ -1,0 +1,53 @@
+name: Terraform CI
+
+on:
+  push:
+    branches: [ dev3 ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    container:
+      # use custome docker image created for terraform with gcloud sdk installed
+      image: ghcr.io/hooubis/terraform-env:1.1.0   # Use your custom Docker image
+      credentials:
+        username: hooubis
+        password: ${{ secrets.GHCR_IO_SCHHIN }}
+
+    #   - uses: actions/checkout@v4
+    #   - uses: docker/login-action@v3
+    #     with:
+    #       registry: ghcr.io
+    #       username:
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # - name: Verify Terraform version
+    #   run: terraform --version
+
+    - name: Initialize Terraform
+      run: terraform init
+      # run: terraform init -backend-config="../../global/backend.tf"
+      working-directory: ./terraform/envs/dev
+
+      # terraform plan with output to a file for later use DEV only
+    - name: Validate Terraform configuration
+      run: terraform plan -out=tfplan
+      working-directory: ./terraform/envs/dev 
+      env:
+        PROJECT_NAME: ${{ env.GCP_SCHHIN_CREDENTIALS }}
+        PROJECT_ID: ${{ env.GCP_SCHHIN_PROJECT_ID }}
+        BILLING_ACCOUNT: ${{ env.GCP_SCHHIN_BILLING_ACCOUNT }}
+        ORG_ID: ${{ env.GCP_SCHHIN_ORG_ID }}
+
+    
+    outputs:
+      tfplan: ${{ steps.validate.outputs.tfplan }}
+

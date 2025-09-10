@@ -1,0 +1,131 @@
+name: TF Apply (local state, saved as artifact)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write        # required for google OIDC (no keys)
+  # packages: read       # uncomment if pulling private GHCR images
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # From repo secrets (Settings → Secrets and variables → Actions)
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION:     ${{ secrets.GCP_REGION }}
+  GCP_ZONE:       ${{ secrets.GCP_ZONE }}
+  ALLOWED_CIDR:   ${{ secrets.ALLOWED_CIDR }}   # e.g., 203.0.113.45/32
+  TF_WORKDIR: terraform/envs/dev
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TF_CLI_ARGS_apply: -auto-approve -lock-timeout=5m
+  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: gcpa-variables
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # OIDC auth → Application Default Credentials for Terraform Google provider
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account:           ${{ secrets.GCP_WIF_SA }}     
+          create_credentials_file:   true
+          export_environment_variables: true
+
+      # Configure a per-run local backend; state stays in repo workspace and is uploaded as an artifact
+      - name: Configure local backend (per-run)
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tfstate
+          cat > backend_local.tf <<'HCL'
+          terraform {
+            backend "local" {
+              path = "tfstate/terraform.tfstate"
+            }
+          }
+          HCL
+
+      - name: Debug TF workdir
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          pwd
+          ls -la
+          echo "----"
+          grep -Hn 'variable "' *.tf || true
+
+      # Hard-stop any lingering impersonation env/config
+      - name: Clear impersonation (env + gcloud)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Unset env vars that trigger ADC impersonation
+          unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT || true
+          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
+          # Clear gcloud config impersonation if any
+          gcloud config unset auth/impersonate_service_account || true
+          echo "Impersonation vars after clear:"
+          echo "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=${GOOGLE_IMPERSONATE_SERVICE_ACCOUNT:-<unset>}"
+          echo "CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT=${CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT:-<unset>}"
+          echo "Active account:"
+          gcloud auth list
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform init -reconfigure
+
+      - name: Format & Validate
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: |
+          terraform fmt -recursive
+          terraform validate
+
+      - name: Plan
+        id: plan
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          CIDR="${ALLOWED_CIDR}"
+          terraform plan \
+            -var="project_id=${GCP_PROJECT_ID}" \
+            -var="region=${GCP_REGION}" \
+            -var="zone=${GCP_ZONE}" \
+            -var="allowed_cidr=${CIDR}" \
+            -out=tfplan.bin
+          terraform show -no-color tfplan.bin > tfplan.txt
+
+      - name: Apply
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform apply -input=false tfplan.bin
+
+      # Save  state and a human-readable plan for later destroy/auditing
+      - name: Upload Terraform outputs (state + plan + text)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ format('tfstate-{0}-{1}', github.run_id, github.run_attempt) }}
+          path: |
+            ${{ env.TF_WORKDIR }}/tfstate/terraform.tfstate
+            ${{ env.TF_WORKDIR }}/tfstate/terraform.lock.hcl
+          if-no-files-found: warn
+          retention-days: 2
+      
+      # Optional: clean up the generated backend file
+      - name: Cleanup backend file
+        if: always()
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: rm -f backend_local.tf || true

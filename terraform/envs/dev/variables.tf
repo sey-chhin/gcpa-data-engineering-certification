@@ -1,7 +1,9 @@
-variable "project_name" {}
+### used for creating projects only 
+# variable "project_name" {}
+# variable "billing_account" {}
+# variable "org_id" {}
+
 variable "project_id" {}
-variable "billing_account" {}
-variable "org_id" {}
 variable "labels" { type = map(string) }
 variable "enable_apis" { type = list(string) }
 variable "vpc_name" {}
@@ -12,14 +14,8 @@ variable "subnets" {
     region = string
   }))
 }
-variable "workload_sa_id" {}
-variable "workload_sa_display_name" {}
-variable "iam_bindings" {
-  type = list(object({
-    role   = string
-    member = string
-  }))
-}
+
+
 variable "storage_buckets" {
   type = list(object({
     name     = string
@@ -47,15 +43,15 @@ variable "disk_type" { type = string }
 
 
 variable "tags" {
-  type        = list(string)
-  default     = []
+  type    = list(string)
+  default = []
 }
 
 variable "e2_name" { type = string }
 
 variable "zone" { type = string }
 
-variable "subnetwork" { type = string}
+variable "subnetwork" { type = string }
 
 variable "workload_sa_email" { type = string }
 
@@ -63,3 +59,16 @@ variable "workload_sa_email" { type = string }
 #   type        = string
 # }
 variable "machine_type" { type = string }
+# Add your variable declarations below
+
+variable "subnet_cidrs" {
+  description = "List of CIDR blocks for the subnets"
+  type        = map(string)
+}
+# Add your variable declarations here
+
+variable "allowed_cidr" {
+  description = "CIDR allowed to reach HTTP/HTTPS on the VM"
+  type        = string
+  default     = "0.0.0.0/0"
+}

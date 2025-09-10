@@ -1,10 +1,4 @@
-########################################
-# Project outputs
-########################################
-output "project_id" {
-  description = "The ID of the GCP project"
-  value       = module.project.id
-}
+
 
 ########################################
 # Networking outputs
@@ -19,13 +13,6 @@ output "subnet_ids" {
   value       = [for s in var.subnets : "${module.networking.vpc_id}/subnetworks/${s.name}"]
 }
 
-########################################
-# IAM outputs
-########################################
-output "workload_service_account_email" {
-  description = "Email address of the workload service account"
-  value       = "${var.workload_sa_id}@${module.project.id}.iam.gserviceaccount.com"
-}
 
 ########################################
 # Storage outputs

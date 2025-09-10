@@ -1,0 +1,104 @@
+name: tf-destroy-from-artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Workflow run ID that produced the state artifact (numeric)"
+        required: true
+      artifact_name:
+        description: "Artifact name (e.g. tfstate-<run_id>-<attempt>)"
+        required: true
+
+permissions:
+  id-token: write     # for google-github-actions/auth (WIF)
+  contents: read      # checkout
+  actions: read       # allow download-artifact by run-id
+
+env:
+  GCP_PROJECT_ID:       ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION:           ${{ secrets.GCP_REGION }}
+  GCP_ZONE:             ${{ secrets.GCP_ZONE }}
+  ALLOWED_CIDR:         ${{ secrets.ALLOWED_CIDR }}
+  TF_WORKDIR:           terraform/envs/dev
+  TF_IN_AUTOMATION:     "true"
+  TF_INPUT:             "false"
+  TF_CLI_ARGS_destroy:  "-auto-approve -lock-timeout=5m"
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    environment: gcpa-variables
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # OIDC -> short-lived ADC for Google provider
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account:           ${{ secrets.GCP_WIF_SA }}
+          create_credentials_file:   true
+          export_environment_variables: true
+
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: hashicorp/setup-terraform@v3
+
+      # Ensure no stray impersonation set in gcloud
+      - name: Clear gcloud impersonation
+        shell: bash
+        run: |
+          gcloud config unset auth/impersonate_service_account || true
+          unset CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT || true
+          gcloud auth list
+
+      # Recreate the same local backend used by apply
+      - name: Configure local backend (per-run)
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tfstate
+          cat > backend_local.tf <<'HCL'
+          terraform {
+            backend "local" {
+              path = "tfstate/terraform.tfstate"
+            }
+          }
+          HCL
+
+      # (Helpful) list artifacts for the run so you can verify the exact name
+      - name: Debug list artifacts for run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}/artifacts \
+            --jq '.artifacts[] | {id: .id, name: .name, expired: .expired}'
+
+      # Download to a temp dir first (avoids nested paths)
+      - name: Download state artifact
+        uses: actions/download-artifact@v4
+        with:
+          name:   ${{ inputs.artifact_name }}    # e.g. tfstate-17623439956-1
+          run-id: ${{ inputs.run_id }}          # e.g. 17623439956
+          repository: ${{ github.repository }}
+          # path:   _artifact_download
+          path:   ${{ env.TF_WORKDIR }}/tfstate 
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Terraform init (local backend)
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform init -reconfigure
+
+      - name: Terraform destroy
+        working-directory: ${{ env.TF_WORKDIR }}
+        shell: bash
+        run: |
+          terraform destroy \
+            -var="project_id=${GCP_PROJECT_ID}" \
+            -var="region=${GCP_REGION}" \
+            -var="zone=${GCP_ZONE}" \
+            -var="allowed_cidr=${ALLOWED_CIDR}"

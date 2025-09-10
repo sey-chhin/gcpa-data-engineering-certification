@@ -1,0 +1,53 @@
+name: Terraform Nightly Destroy (dev)
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC daily
+  workflow_dispatch: {}    # allow manual run too
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TF_CLI_ARGS_init: -input=false
+  TF_CLI_ARGS_destroy: -auto-approve -lock-timeout=5m
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: tf-nightly-destroy
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Backend config
+        working-directory: terraform
+        run: |
+          cat > backend.hcl <<'HCL'
+          bucket = "YOUR_TF_STATE_BUCKET"
+          prefix = "terraform/state/dev"
+          HCL
+
+      - name: Init
+        working-directory: terraform
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Destroy
+        working-directory: terraform
+        run: |
+          terraform destroy \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="region=${{ secrets.GCP_REGION }}"

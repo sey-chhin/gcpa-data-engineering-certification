@@ -1,4 +1,10 @@
-terraform/.terraform/*
-*.terra
+# terraform/.terraform/*
+# *.terra
+# .DS_Store
+# terraform/terraform-provider-google*
+
+terraform/.terraform
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/state/
 .DS_Store
-terraform/terraform-provider-google*
