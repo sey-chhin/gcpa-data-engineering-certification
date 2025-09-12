@@ -54,3 +54,4 @@ That’s it—add those secrets and both workflows you set up will run without p
 
 https://cloud.google.com/sdk/docs/install
 https://developer.hashicorp.com/terraform/install
+gscloud cheat sheet: https://cloud.google.com/sdk/docs/cheatsheet
