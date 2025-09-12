@@ -33,11 +33,6 @@ variable "nat_logging" {
   default     = "ERRORS_ONLY"
 }
 
-variable "subnet_cidrs" {
-  description = "Map of subnet_name => CIDR (e.g., { primary = \"10.0.0.0/24\" })"
-  type        = map(string)
-}
-
 variable "vpc_name" {
   description = "The name of the VPC network"
   type        = string
@@ -47,9 +42,7 @@ variable "region" {
   description = "The region to deploy resources"
   type        = string
 }
-variable "project_id" { type = string }
-variable "vpc_name"    { type = string }
-variable "region"      { type = string }
+
 
 # Map of subnet name -> CIDR, e.g. { primary = "10.150.0.0/20" }
 variable "subnet_cidrs" {
